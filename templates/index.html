@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Video Streaming</title>
+</head>
+<body>
+<a href="/image">image</a><br>
+for get image<br>
+<br>
+<a href="/video">video</a><br>
+for get video<br>
+if camera error, return 500<br>
+<img src="{{ url_for('video_feed') }}" width="300px"><br>
+<br>
+<a href="/old-video">old-video</a><br>
+for get video<br>
+if camera error, return old video<br>
+<img src="{{ url_for('old_video_feed') }}" width="300px"><br>
+<br>
+</body>
+</html>
