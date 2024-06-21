@@ -4,7 +4,7 @@ import numpy as np
 
 
 def get_from_image():
-    url = 'http://192.168.225.137:2000/image'
+    url = 'http://192.168.225.137:2000/old-image'
     while True:
         req = urllib.request.urlopen(url)
         arr = np.asarray(bytearray(req.read()), dtype=np.uint8)
@@ -15,7 +15,7 @@ def get_from_image():
 
 
 def get_from_video():
-    url = 'http://192.168.225.137:2000/video'
+    url = 'http://192.168.225.137:2000/old-video'
     cap = cv2.VideoCapture(url)
     while True:
         _, img = cap.read()

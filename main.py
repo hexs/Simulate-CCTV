@@ -22,16 +22,25 @@ def index():
     return render_template('index.html')
 
 
-@app.route('/image')
-def get_image():
+def get_image_from_buffer(data, check_status=True):
     frame = app.config['data']['img']
     success = app.config['data']['status']
 
-    if success:
+    if check_status and success or check_status == False:
         ret, buffer = cv2.imencode('.jpg', frame)
         return Response(buffer.tobytes(), mimetype='image/jpeg')
     else:
         return "Failed to capture image", 500
+
+
+@app.route('/image')
+def get_image():
+    return get_image_from_buffer(app.config['data'])
+
+
+@app.route('/old-image')
+def get_old_image():
+    return get_image_from_buffer(app.config['data'], check_status=False)
 
 
 def generate_video_stream(data, check_status=True):
