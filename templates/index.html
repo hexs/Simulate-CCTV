@@ -1,19 +1,62 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Streaming</title>
+    <style>
+        table, td, th {
+            border: 1px solid;
+            padding: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+    </style>
 </head>
 <body>
-<a href="/image">image</a><br>
-?source=display_capture ***<br>
-?source=video_capture<br>
-
-<br>
-<br>
-<a href="/video">video</a><br>
-?source=display_capture ***<br>
-?source=video_capture<br>
-<img src="{{ url_for('get_video') }}" width="300px"><br>
-<br>
+<h1>Camera Result</h1>
+<table>
+    <tr>
+        <td>
+            <a href="/image">/image</a><br>
+            ?source=display_capture *<br>
+            ?source=video_capture<br>
+        </td>
+        <td>
+            <a href="/image?source=video_capture">/image?source=video_capture</a><br>
+            ?source=display_capture *<br>
+            ?source=video_capture<br>
+        </td>
+    </tr>
+    <tr>
+        <td>
+            <a href="/video">/video</a><br>
+            ?source=display_capture *<br>
+            ?source=video_capture<br>
+            <img src="{{ url_for('get_video') }}" width="300px"><br>
+        </td>
+        <td>
+            <a href="/video?source=video_capture">/video?source=video_capture</a><br>
+            ?source=display_capture *<br>
+            ?source=video_capture<br>
+            <img src="{{ url_for('get_video') }}?source=video_capture" width="300px"><br>
+        </td>
+    </tr>
+</table>
+<h1>Camera Control</h1>
+<form action="{{ url_for('update_cameras') }}" method="post">
+    {% for camera, state in camera_states.items() %}
+    <div>
+        <label>
+            <input type="checkbox" name="{{ camera }}" {% if state %}checked{% endif %}>
+            {{ camera.replace('_', ' ').title() }}
+        </label>
+    </div>
+    {% endfor %}
+    <button type="submit">Update Cameras</button>
+</form>
 </body>
 </html>

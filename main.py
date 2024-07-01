@@ -1,9 +1,12 @@
 import multiprocessing
 import numpy as np
-from flask import Flask, render_template, Response, request
+from flask import Flask, render_template, Response, request, redirect, url_for
 import socket
 import cv2
 from PIL import ImageGrab, Image
+from datetime import datetime
+
+CAMERA_n = 2
 
 
 def display_capture(data):
@@ -14,15 +17,34 @@ def display_capture(data):
         data['display_capture'] = image
 
 
-def video_capture(data):
-    cap = cv2.VideoCapture(0)
+def video_capture(data, camera_id):
+    cap = cv2.VideoCapture(camera_id)
     while True:
-        status, img = cap.read()
-        data['status'] = status
-        if status:
-            data['img'] = img.copy()
+        if data[f'camera_{camera_id}_enabled']:
+            status, img = cap.read()
+            data[f'status_{camera_id}'] = status
+            if status:
+                data[f'img_{camera_id}'] = img.copy()
+            else:
+                cap = cv2.VideoCapture(camera_id)
         else:
-            cap = cv2.VideoCapture(0)
+            data[f'status_{camera_id}'] = False
+            data[f'img_{camera_id}'] = np.full((480, 640, 3), (50, 50, 50), dtype=np.uint8)
+
+
+def get_data(data, source, camera_id):
+    if source == 'display_capture':
+        frame = data['display_capture']
+    elif source == 'video_capture':
+        frame = data[f'img_{camera_id}']
+        success = data[f'status_{camera_id}']
+        if not success:
+            cv2.putText(frame, f'Failed to capture image', (30, 50), 1, 2, (0, 0, 255), 2)
+            cv2.putText(frame, f'from camera {camera_id}', (30, 90), 1, 2, (0, 0, 255), 2)
+            cv2.putText(frame, datetime.now().strftime('%Y-%m-%d  %H:%M:%S'), (30, 130), 1, 2, (0, 0, 255), 2)
+
+    ret, buffer = cv2.imencode('.jpg', frame)
+    return buffer
 
 
 app = Flask(__name__)
@@ -30,40 +52,36 @@ app = Flask(__name__)
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    camera_states = {
+        f'camera_{i}': app.config['data'][f'camera_{i}_enabled']
+        for i in range(CAMERA_n)
+    }
+    return render_template('index.html', camera_states=camera_states)
 
 
-def _get_image(data, source):
-    if source == 'display_capture':
-        frame = data['display_capture']
-    elif source == 'video_capture':
-        frame = data['img']
-        success = data['status']
-        if not success:
-            cv2.putText(frame, 'Failed to capture image', (50, 50), 1, 2, (0, 0, 255), 2)
-    else:
-        return 'error'
-    ret, buffer = cv2.imencode('.jpg', frame)
+@app.route('/update_cameras', methods=['POST'])
+def update_cameras():
+    for i in range(CAMERA_n):
+        camera_key = f'camera_{i}'
+        app.config['data'][f'{camera_key}_enabled'] = camera_key in request.form
+    return redirect(url_for('index'))
+
+
+def _get_image(data, source, camera_id):
+    buffer = get_data(data, source, camera_id)
     return Response(buffer.tobytes(), mimetype='image/jpeg')
 
 
 @app.route('/image')
 def get_image():
     source = request.args.get('source', default='display_capture', type=str)  # display_capture, video_capture,
-    return _get_image(app.config['data'], source)
+    camera_id = request.args.get('id', default=0, type=int)  # 1, 2, ...
+    return _get_image(app.config['data'], source, camera_id)
 
 
-def _get_video(data, source):
+def _get_video(data, source, camera_id):
     while True:
-        if source == 'display_capture':
-            frame = data['display_capture']
-        elif source == 'video_capture':
-            frame = data['img']
-            success = data['status']
-            if not success:
-                cv2.putText(frame, 'Failed to capture image', (50, 50), 1, 2, (0, 0, 255), 2)
-
-        ret, buffer = cv2.imencode('.jpg', frame)
+        buffer = get_data(data, source, camera_id)
         frame = buffer.tobytes()
         yield (b'--frame\r\n'
                b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
@@ -71,9 +89,10 @@ def _get_video(data, source):
 
 @app.route('/video')
 def get_video():
-    source = request.args.get('source', default='display_capture', type=str)  # display_capture, video_capture,
+    source = request.args.get('source', default='display_capture', type=str)
+    camera_id = request.args.get('id', default=0, type=int)  # 1, 2, ...
     return Response(
-        _get_video(app.config['data'], source),
+        _get_video(app.config['data'], source, camera_id),
         mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
@@ -89,18 +108,27 @@ if __name__ == "__main__":
 
     manager = multiprocessing.Manager()
     data = manager.dict()
-    data['status'] = False
-    data['img'] = np.full((500, 500, 3), (50, 50, 50), dtype=np.uint8)
-    data['display_capture'] = np.full((500, 500, 3), (50, 50, 50), dtype=np.uint8)
+    for camera_id in range(CAMERA_n):
+        data[f'status_{camera_id}'] = False
+        data[f'img_{camera_id}'] = np.full((480, 640, 3), (50, 50, 50), dtype=np.uint8)
+        data[f'camera_{camera_id}_enabled'] = True  # Default to enabled
+    data['display_capture'] = np.full((480, 640, 3), (50, 50, 50), dtype=np.uint8)
 
-    video_capture_process = multiprocessing.Process(target=video_capture, args=(data,))
+    video_capture_process = [
+        multiprocessing.Process(target=video_capture, args=(data, camera_id))
+        for camera_id in range(CAMERA_n)
+    ]
     display_capture_process = multiprocessing.Process(target=display_capture, args=(data,))
     run_server_process = multiprocessing.Process(target=run_server, args=(data,))
 
-    video_capture_process.start()
+    # Start all processes
+    for process in video_capture_process:
+        process.start()
     display_capture_process.start()
     run_server_process.start()
 
-    video_capture_process.join()
+    # Join all processes
+    for process in video_capture_process:
+        process.join()
     display_capture_process.join()
     run_server_process.join()
