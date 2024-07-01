@@ -5,22 +5,15 @@
 </head>
 <body>
 <a href="/image">image</a><br>
-for get image<br>
-if camera error, return 500<br>
+?source=display_capture ***<br>
+?source=video_capture<br>
+
 <br>
-<a href="/old-image">old-image</a><br>
-for get image<br>
-if camera error, return old image<br>
 <br>
 <a href="/video">video</a><br>
-for get video<br>
-if camera error, return 500<br>
-<img src="{{ url_for('video_feed') }}" width="300px"><br>
-<br>
-<a href="/old-video">old-video</a><br>
-for get video<br>
-if camera error, return old video<br>
-<img src="{{ url_for('old_video_feed') }}" width="300px"><br>
+?source=display_capture ***<br>
+?source=video_capture<br>
+<img src="{{ url_for('get_video') }}" width="300px"><br>
 <br>
 </body>
 </html>

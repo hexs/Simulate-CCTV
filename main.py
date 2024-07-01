@@ -1,12 +1,20 @@
 import multiprocessing
-from flask import Flask, render_template, Response
+import numpy as np
+from flask import Flask, render_template, Response, request
 import socket
 import cv2
+from PIL import ImageGrab, Image
 
-app = Flask(__name__)
+
+def display_capture(data):
+    while True:
+        pil_image = ImageGrab.grab()
+        image_bgr = np.array(pil_image)
+        image = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+        data['display_capture'] = image
 
 
-def capture(data):
+def video_capture(data):
     cap = cv2.VideoCapture(0)
     while True:
         status, img = cap.read()
@@ -17,57 +25,56 @@ def capture(data):
             cap = cv2.VideoCapture(0)
 
 
+app = Flask(__name__)
+
+
 @app.route('/')
 def index():
     return render_template('index.html')
 
 
-def get_image_from_buffer(data, check_status=True):
-    frame = app.config['data']['img']
-    success = app.config['data']['status']
-
-    if check_status and success or check_status == False:
-        ret, buffer = cv2.imencode('.jpg', frame)
-        return Response(buffer.tobytes(), mimetype='image/jpeg')
+def _get_image(data, source):
+    if source == 'display_capture':
+        frame = data['display_capture']
+    elif source == 'video_capture':
+        frame = data['img']
+        success = data['status']
+        if not success:
+            cv2.putText(frame, 'Failed to capture image', (50, 50), 1, 2, (0, 0, 255), 2)
     else:
-        return "Failed to capture image", 500
+        return 'error'
+    ret, buffer = cv2.imencode('.jpg', frame)
+    return Response(buffer.tobytes(), mimetype='image/jpeg')
 
 
 @app.route('/image')
 def get_image():
-    return get_image_from_buffer(app.config['data'])
+    source = request.args.get('source', default='display_capture', type=str)  # display_capture, video_capture,
+    return _get_image(app.config['data'], source)
 
 
-@app.route('/old-image')
-def get_old_image():
-    return get_image_from_buffer(app.config['data'], check_status=False)
-
-
-def generate_video_stream(data, check_status=True):
+def _get_video(data, source):
     while True:
-        frame = data['img']
-        success = data['status']
+        if source == 'display_capture':
+            frame = data['display_capture']
+        elif source == 'video_capture':
+            frame = data['img']
+            success = data['status']
+            if not success:
+                cv2.putText(frame, 'Failed to capture image', (50, 50), 1, 2, (0, 0, 255), 2)
 
-        if check_status and success or check_status == False:
-            ret, buffer = cv2.imencode('.jpg', frame)
-            frame = buffer.tobytes()
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
-        else:
-            yield (b'--frame\r\n'
-                   b'Content-Type: text/plain\r\n\r\nFailed to capture image\r\n')
+        ret, buffer = cv2.imencode('.jpg', frame)
+        frame = buffer.tobytes()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
 
 
 @app.route('/video')
-def video_feed():
-    return Response(generate_video_stream(app.config['data']),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
-
-
-@app.route('/old-video')
-def old_video_feed():
-    return Response(generate_video_stream(app.config['data'], check_status=False),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+def get_video():
+    source = request.args.get('source', default='display_capture', type=str)  # display_capture, video_capture,
+    return Response(
+        _get_video(app.config['data'], source),
+        mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
 def run_server(data):
@@ -78,14 +85,22 @@ def run_server(data):
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
+
     manager = multiprocessing.Manager()
     data = manager.dict()
+    data['status'] = False
+    data['img'] = np.full((500, 500, 3), (50, 50, 50), dtype=np.uint8)
+    data['display_capture'] = np.full((500, 500, 3), (50, 50, 50), dtype=np.uint8)
 
-    capture_process = multiprocessing.Process(target=capture, args=(data,))
+    video_capture_process = multiprocessing.Process(target=video_capture, args=(data,))
+    display_capture_process = multiprocessing.Process(target=display_capture, args=(data,))
     run_server_process = multiprocessing.Process(target=run_server, args=(data,))
 
-    capture_process.start()
+    video_capture_process.start()
+    display_capture_process.start()
     run_server_process.start()
 
-    capture_process.join()
+    video_capture_process.join()
+    display_capture_process.join()
     run_server_process.join()
