@@ -22,26 +22,34 @@
     <tr>
         <td>
             <a href="/image">/image</a><br>
-            ?source=display_capture *<br>
-            ?source=video_capture<br>
+            source=display_capture *<br>
+            source=video_capture<br>
+            id = 0 *<br>
+            id = 1, 2, ...<br>
         </td>
         <td>
             <a href="/image?source=video_capture">/image?source=video_capture</a><br>
-            ?source=display_capture *<br>
-            ?source=video_capture<br>
+            source=display_capture *<br>
+            source=video_capture<br>
+            id = 0 *<br>
+            id = 1, 2, ...<br>
         </td>
     </tr>
     <tr>
         <td>
             <a href="/video">/video</a><br>
-            ?source=display_capture *<br>
-            ?source=video_capture<br>
+            source=display_capture *<br>
+            source=video_capture<br>
+            id = 0 *<br>
+            id = 1, 2, ...<br>
             <img src="{{ url_for('get_video') }}" width="300px"><br>
         </td>
         <td>
             <a href="/video?source=video_capture">/video?source=video_capture</a><br>
-            ?source=display_capture *<br>
-            ?source=video_capture<br>
+            source=display_capture *<br>
+            source=video_capture<br>
+            id = 0 *<br>
+            id = 1, 2, ...<br>
             <img src="{{ url_for('get_video') }}?source=video_capture" width="300px"><br>
         </td>
     </tr>
