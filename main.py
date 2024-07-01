@@ -6,7 +6,7 @@ import cv2
 from PIL import ImageGrab, Image
 from datetime import datetime
 
-CAMERA_n = 2
+CAMERA_n = 1
 
 
 def display_capture(data):
@@ -44,6 +44,8 @@ def get_data(data, source, camera_id):
             cv2.putText(frame, datetime.now().strftime('%Y-%m-%d  %H:%M:%S'), (30, 130), 1, 2, (0, 0, 255), 2)
 
     ret, buffer = cv2.imencode('.jpg', frame)
+    # encode_param = [cv2.IMWRITE_JPEG_QUALITY, 50]  # Adjust quality (0-100)
+    # ret, buffer = cv2.imencode('.jpg', frame, encode_param)
     return buffer
 
 
