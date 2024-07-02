@@ -1,3 +1,5 @@
+import os
+import json
 import multiprocessing
 import numpy as np
 from flask import Flask, render_template, Response, request, redirect, url_for
@@ -5,8 +7,6 @@ import socket
 import cv2
 from PIL import ImageGrab, Image
 from datetime import datetime
-
-CAMERA_n = 1
 
 
 def display_capture(data):
@@ -56,14 +56,14 @@ app = Flask(__name__)
 def index():
     camera_states = {
         f'camera_{i}': app.config['data'][f'camera_{i}_enabled']
-        for i in range(CAMERA_n)
+        for i in range(app.config['data']['number_of_cameras'])
     }
     return render_template('index.html', camera_states=camera_states)
 
 
 @app.route('/update_cameras', methods=['POST'])
 def update_cameras():
-    for i in range(CAMERA_n):
+    for i in range(app.config['data']['number_of_cameras']):
         camera_key = f'camera_{i}'
         app.config['data'][f'{camera_key}_enabled'] = camera_key in request.form
     return redirect(url_for('index'))
@@ -100,17 +100,36 @@ def get_video():
 
 def run_server(data):
     app.config['data'] = data
-    hostname = socket.gethostname()
-    ipv4_address = socket.gethostbyname(hostname)
+    ipv4_address = data['ipv4_address']
     app.run(host=ipv4_address, port=2000, debug=True, use_reloader=False)
 
 
 if __name__ == "__main__":
     multiprocessing.freeze_support()
-
     manager = multiprocessing.Manager()
     data = manager.dict()
-    for camera_id in range(CAMERA_n):
+
+    config_file = os.path.join('config.json')
+    if not os.path.exists('config.json'):
+        with open('config.json', 'w') as f:
+            json.dump({
+                "IPv4 Address": "auto",
+                "Number of cameras": "1"
+            }, f, indent=4)
+
+    with open('config.json') as f:
+        config = json.load(f)
+    print(config)
+    if config['IPv4 Address'] == 'auto':
+        hostname = socket.gethostname()
+        ipv4_address = socket.gethostbyname(hostname)
+    else:
+        ipv4_address = config['IPv4 Address']
+
+    data['number_of_cameras'] = int(config['Number of cameras'])
+    data['ipv4_address'] = ipv4_address
+
+    for camera_id in range(data['number_of_cameras']):
         data[f'status_{camera_id}'] = False
         data[f'img_{camera_id}'] = np.full((480, 640, 3), (50, 50, 50), dtype=np.uint8)
         data[f'camera_{camera_id}_enabled'] = True  # Default to enabled
@@ -118,7 +137,7 @@ if __name__ == "__main__":
 
     video_capture_process = [
         multiprocessing.Process(target=video_capture, args=(data, camera_id))
-        for camera_id in range(CAMERA_n)
+        for camera_id in range(data['number_of_cameras'])
     ]
     display_capture_process = multiprocessing.Process(target=display_capture, args=(data,))
     run_server_process = multiprocessing.Process(target=run_server, args=(data,))
