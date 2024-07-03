@@ -6,17 +6,16 @@ from flask import Flask, render_template, Response, request, redirect, url_for
 import socket
 import cv2
 from PIL import ImageGrab, Image
+import mss
 from datetime import datetime
 
 
 def display_capture(data):
     while True:
-        try:
-            pil_image = ImageGrab.grab()
-        except:
-            print('display_capture error')
-        image_bgr = np.array(pil_image)
-        image = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+        with mss.mss() as sct:
+            screenshot = sct.grab(sct.monitors[0])
+        image = np.array(screenshot)
+
         data['display_capture'] = image
 
 
