@@ -11,7 +11,10 @@ from datetime import datetime
 
 def display_capture(data):
     while True:
-        pil_image = ImageGrab.grab()
+        try:
+            pil_image = ImageGrab.grab()
+        except:
+            print('display_capture error')
         image_bgr = np.array(pil_image)
         image = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
         data['display_capture'] = image
