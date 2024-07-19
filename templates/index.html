@@ -21,35 +21,30 @@
 <table>
     <tr>
         <td>
-            <a href="/image">/image</a><br>
+            <a href="/image?source=display_capture">/image?source=display_capture</a><br>
             source=display_capture *<br>
-            source=video_capture<br>
-            id = 0 *<br>
-            id = 1, 2, ...<br>
         </td>
         <td>
-            <a href="/image?source=video_capture">/image?source=video_capture</a><br>
-            source=display_capture *<br>
+            <a href="/image?source=video_capture&id=0">/image?source=video_capture&id=0</a><br>
             source=video_capture<br>
             id = 0 *<br>
-            id = 1, 2, ...<br>
+            id = 1, 2, ... (for other camera)<br>
         </td>
     </tr>
     <tr>
         <td>
-            <a href="/video">/video</a><br>
+            <a href="/video?source=display_capture">/video?source=display_capture</a><br>
             source=display_capture *<br>
-            source=video_capture<br>
-            id = 0 *<br>
-            id = 1, 2, ...<br>
+            <br>
             <img src="{{ url_for('get_video') }}" width="300px"><br>
         </td>
         <td>
-            <a href="/video?source=video_capture">/video?source=video_capture</a><br>
+            <a href="/video?source=video_capture&id=0">/video?source=video_capture&id=0</a><br>
             source=display_capture *<br>
             source=video_capture<br>
             id = 0 *<br>
-            id = 1, 2, ...<br>
+            id = 1, 2, ... (for other camera)<br>
+            <br>
             <img src="{{ url_for('get_video') }}?source=video_capture" width="300px"><br>
         </td>
     </tr>
