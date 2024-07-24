@@ -5,18 +5,33 @@ import numpy as np
 from flask import Flask, render_template, Response, request, redirect, url_for
 import socket
 import cv2
-from PIL import ImageGrab, Image
-import mss
 from datetime import datetime
+import platform
+
+# Conditional imports based on the platform
+if platform.system() == "Windows":
+    import mss
+else:
+    import picamera
+    from picamera.array import PiRGBArray
 
 
 def display_capture(data):
-    while True:
+    if platform.system() == "Windows":
         with mss.mss() as sct:
-            screenshot = sct.grab(sct.monitors[0])
-        image = np.array(screenshot)
-
-        data['display_capture'] = image
+            while True:
+                screenshot = sct.grab(sct.monitors[0])
+                image = np.array(screenshot)
+                data['display_capture'] = image
+    else:
+        with picamera.PiCamera() as camera:
+            camera.resolution = (640, 480)
+            camera.framerate = 24
+            rawCapture = PiRGBArray(camera, size=(640, 480))
+            for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+                image = frame.array
+                data['display_capture'] = image
+                rawCapture.truncate(0)
 
 
 def video_capture(data, camera_id):
