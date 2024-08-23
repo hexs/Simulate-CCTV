@@ -1,6 +1,8 @@
 import os
 import json
 import multiprocessing
+import time
+
 import numpy as np
 from flask import Flask, render_template, Response, request, redirect, url_for
 import socket
@@ -36,6 +38,8 @@ def display_capture(data):
 
 def video_capture(data, camera_id):
     cap = cv2.VideoCapture(camera_id)
+    cap.set(3, data['FRAME_WIDTH'])
+    cap.set(4, data['FRAME_HEIGHT'])
     while True:
         if data[f'camera_{camera_id}_enabled']:
             status, img = cap.read()
@@ -43,7 +47,10 @@ def video_capture(data, camera_id):
             if status:
                 data[f'img_{camera_id}'] = img.copy()
             else:
+                time.sleep(1)
                 cap = cv2.VideoCapture(camera_id)
+                cap.set(3, data['FRAME_WIDTH'])
+                cap.set(4, data['FRAME_HEIGHT'])
         else:
             data[f'status_{camera_id}'] = False
             data[f'img_{camera_id}'] = np.full((480, 640, 3), (50, 50, 50), dtype=np.uint8)
@@ -116,8 +123,13 @@ def get_video():
 
 
 def run_server(data):
+    import logging
+    log = logging.getLogger('werkzeug')
+    log.disabled = True
+
     app.config['data'] = data
     ipv4_address = data['ipv4_address']
+    print(f" * Running on http://{ipv4_address}:2000")
     app.run(host=ipv4_address, port=2000, debug=True, use_reloader=False)
 
 
@@ -131,7 +143,9 @@ if __name__ == "__main__":
         with open('config.json', 'w') as f:
             json.dump({
                 "IPv4 Address": "auto",
-                "Number of cameras": "1"
+                "Number of cameras": "1",
+                "wight": 3264,
+                "height": 2448,
             }, f, indent=4)
 
     with open('config.json') as f:
@@ -145,6 +159,8 @@ if __name__ == "__main__":
 
     data['number_of_cameras'] = int(config['Number of cameras'])
     data['ipv4_address'] = ipv4_address
+    data['FRAME_WIDTH'] = config["wight"]
+    data['FRAME_HEIGHT'] = config["height"]
 
     for camera_id in range(data['number_of_cameras']):
         data[f'status_{camera_id}'] = False
