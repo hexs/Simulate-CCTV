@@ -57,6 +57,16 @@
             <input type="checkbox" name="{{ camera }}" {% if state %}checked{% endif %}>
             {{ camera.replace('_', ' ').title() }}
         </label>
+        <br>
+        <label>
+            w =
+            <input name="w{{ camera }}">
+        </label>
+        <br>
+        <label>
+            h =
+            <input name="h{{ camera }}">
+        </label>
     </div>
     {% endfor %}
     <button type="submit">Update Cameras</button>
