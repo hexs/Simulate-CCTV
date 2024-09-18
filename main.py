@@ -37,9 +37,14 @@ def display_capture(data):
 
 
 def video_capture(data, camera_id):
-    cap = cv2.VideoCapture(camera_id)
-    cap.set(3, data['FRAME_WIDTH'])
-    cap.set(4, data['FRAME_HEIGHT'])
+    def setup():
+        cap = cv2.VideoCapture(int(camera_id))
+        if data.get(camera_id) and data[camera_id].get('wight') and data[camera_id].get('height'):
+            cap.set(3, data[camera_id]['wight'])
+            cap.set(4, data[camera_id]['height'])
+        return cap
+
+    cap = setup()
     while True:
         if data[f'camera_{camera_id}_enabled']:
             status, img = cap.read()
@@ -48,9 +53,7 @@ def video_capture(data, camera_id):
                 data[f'img_{camera_id}'] = img.copy()
             else:
                 time.sleep(1)
-                cap = cv2.VideoCapture(camera_id)
-                cap.set(3, data['FRAME_WIDTH'])
-                cap.set(4, data['FRAME_HEIGHT'])
+                cap = setup()
         else:
             data[f'status_{camera_id}'] = False
             data[f'img_{camera_id}'] = np.full((480, 640, 3), (50, 50, 50), dtype=np.uint8)
@@ -142,25 +145,30 @@ if __name__ == "__main__":
     if not os.path.exists('config.json'):
         with open('config.json', 'w') as f:
             json.dump({
-                "IPv4 Address": "auto",
-                "Number of cameras": "1",
-                "wight": 3264,
-                "height": 2448,
+                "ipv4_address": "auto",
+                "number_of_cameras": 1,
+                "0": {
+                    "wight": 640,
+                    "height": 480,
+                },
+                "1": {
+                    "wight": 640,
+                    "height": 480,
+                }
             }, f, indent=4)
 
     with open('config.json') as f:
         config = json.load(f)
-    print(config)
-    if config['IPv4 Address'] == 'auto':
-        hostname = socket.gethostname()
-        ipv4_address = socket.gethostbyname(hostname)
-    else:
-        ipv4_address = config['IPv4 Address']
 
-    data['number_of_cameras'] = int(config['Number of cameras'])
-    data['ipv4_address'] = ipv4_address
-    data['FRAME_WIDTH'] = config["wight"]
-    data['FRAME_HEIGHT'] = config["height"]
+    for k, v in config.items():
+        data[k] = v
+
+    if data['ipv4_address'] == 'auto':
+        hostname = socket.gethostname()
+        data['ipv4_address'] = socket.gethostbyname(hostname)
+
+    data['number_of_cameras'] = int(data['number_of_cameras'])
+    print(data)
 
     for camera_id in range(data['number_of_cameras']):
         data[f'status_{camera_id}'] = False
@@ -169,7 +177,7 @@ if __name__ == "__main__":
     data['display_capture'] = np.full((480, 640, 3), (50, 50, 50), dtype=np.uint8)
 
     video_capture_process = [
-        multiprocessing.Process(target=video_capture, args=(data, camera_id))
+        multiprocessing.Process(target=video_capture, args=(data, f'{camera_id}'))
         for camera_id in range(data['number_of_cameras'])
     ]
     display_capture_process = multiprocessing.Process(target=display_capture, args=(data,))
