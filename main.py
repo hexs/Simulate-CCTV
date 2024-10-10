@@ -1,21 +1,16 @@
-import os
-import json
 import multiprocessing
 import time
-
 import numpy as np
 from flask import Flask, render_template, Response, request, redirect, url_for
 import socket
 import cv2
 from datetime import datetime
+from hexss import json_load, json_update
 import platform
 
 # Conditional imports based on the platform
 if platform.system() == "Windows":
     import mss
-else:
-    import picamera
-    from picamera.array import PiRGBArray
 
 
 def display_capture(data):
@@ -25,15 +20,6 @@ def display_capture(data):
                 screenshot = sct.grab(sct.monitors[0])
                 image = np.array(screenshot)
                 data['display_capture'] = image
-    else:
-        with picamera.PiCamera() as camera:
-            camera.resolution = (640, 480)
-            camera.framerate = 24
-            rawCapture = PiRGBArray(camera, size=(640, 480))
-            for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
-                image = frame.array
-                data['display_capture'] = image
-                rawCapture.truncate(0)
 
 
 def video_capture(data, camera_id):
@@ -140,26 +126,18 @@ if __name__ == "__main__":
     multiprocessing.freeze_support()
     manager = multiprocessing.Manager()
     data = manager.dict()
-
-    config_file = os.path.join('config.json')
-    if not os.path.exists('config.json'):
-        with open('config.json', 'w') as f:
-            json.dump({
-                "ipv4_address": "auto",
-                "number_of_cameras": 1,
-                "0": {
-                    "wight": 640,
-                    "height": 480,
-                },
-                "1": {
-                    "wight": 640,
-                    "height": 480,
-                }
-            }, f, indent=4)
-
-    with open('config.json') as f:
-        config = json.load(f)
-
+    config = json_load('config.json', {
+        "ipv4_address": "auto",
+        "number_of_cameras": 1,
+        "0": {
+            "wight": 640,
+            "height": 480,
+        },
+        "1": {
+            "wight": 640,
+            "height": 480,
+        }
+    })
     for k, v in config.items():
         data[k] = v
 
