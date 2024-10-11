@@ -1,6 +1,5 @@
 import multiprocessing
 import time
-from statistics import pvariance
 from typing import Dict, Any, List
 import numpy as np
 from flask import Flask, render_template, Response, request, redirect, url_for
