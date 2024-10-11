@@ -25,6 +25,8 @@
 
         h1 {
             color: #333;
+            margin-top: 50px;
+            margin-bottom: 10px;
         }
 
         .camera-control {
@@ -56,35 +58,71 @@
 <h1>Camera Result</h1>
 <table>
     <tr>
-        <th>Display Capture <a href="/image?source=display_capture">/image?source=display_capture</a></th>
-        <th>Video Capture <a href="/image?source=video_capture&id=0">/image?source=video_capture&id=0</a></th>
+        <th>Link</th>
+        <th>Video</th>
     </tr>
     <tr>
+        <td>
+            for image: <a href="/image?source=display_capture">/image?source=display_capture</a><br>
+            for video: <a href="/video?source=display_capture">/video?source=display_capture</a>
+        </td>
         <td><img src="{{ url_for('get_video') }}" width="300" alt="Display Capture"></td>
-        <td><img src="{{ url_for('get_video') }}?source=video_capture" width="300" alt="Video Capture"></td>
     </tr>
+    {% for i in range(camera_states|length) %}
+    <tr>
+        <td>
+            for image: <a href="/image?source=video_capture&id={{ i }}">/image?source=video_capture&id={{ i }}</a><br>
+            for video: <a href="/video?source=video_capture&id={{ i }}">/video?source=video_capture&id={{ i }}</a>
+        </td>
+        <td><img src="{{ url_for('get_video') }}?source=video_capture&id={{ i }}" width="300" alt="Video Capture"></td>
+    </tr>
+    {% endfor %}
 </table>
-
 <h1>Camera Control</h1>
 <form action="{{ url_for('update_cameras') }}" method="post">
-    {% for camera, state in camera_states.items() %}
+    {% for camera in camera_states %}
     <div class="camera-control">
         <label>
-            <input type="checkbox" name="{{ camera }}" {% if state %}checked{% endif %}>
-            {{ camera.replace('_', ' ').title() }}
+            <input type="checkbox" name="camera_{{ loop.index0 }}" {% if camera.camera_enabled %}checked{% endif %}>
+            Camera {{ loop.index0 }}
         </label>
-        <br>
         <label>
             Width:
-            <input type="number" name="w{{ camera }}" min="1" max="4096">
+            <input type="number" name="wcamera_{{ loop.index0 }}" value="{{ camera.width }}">
         </label>
         <label>
             Height:
-            <input type="number" name="h{{ camera }}" min="1" max="2160">
+            <input type="number" name="hcamera_{{ loop.index0 }}" value="{{ camera.height }}">
         </label>
     </div>
     {% endfor %}
     <button type="submit">Update Cameras</button>
 </form>
+<h1>Note</h1>
+/<a style="color: red">image</a>?source=<a style="color: blue">video_capture</a>&id=<a style="color: Orange">0</a>
+&quality=<a style="color: fuchsia">30</a><br>
+<table>
+    <tr>
+        <td><b>path</b></td>
+        <td><a style="color: red">image, video</a></td>
+        <td><b>default val</b></td>
+    </tr>
+    <tr>
+        <td><b>source</b></td>
+        <td style="color: blue">display_capture, video_capture</td>
+        <td>display_capture</td>
+    </tr>
+    <tr>
+        <td><b>id (camera id)</b></td>
+        <td style="color: Orange">0, 1, ...</td>
+        <td>0</td>
+    </tr>
+    <tr>
+        <td><b>quality</b></td>
+        <td style="color: fuchsia">0-100</td>
+        <td>100 for image <br>and 30 for video</td>
+    </tr>
+</table>
+
 </body>
 </html>
